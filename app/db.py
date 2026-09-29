@@ -232,9 +232,8 @@ class Database:
             where.append("category = ?")
             params.append(category)
         if q:
-            # LIKE is case-insensitive for ASCII in SQLite. Escape the LIKE
-            # wildcards so a search for "100%" means the text "100%".
-            pattern = "%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%"
+            # LIKE is case-insensitive for ASCII in SQLite.
+            pattern = "%" + escape_like(q) + "%"
             where.append("(clean_title LIKE ? ESCAPE '\\' OR raw_title LIKE ? ESCAPE '\\')")
             params += [pattern, pattern]
         where_sql = ("WHERE " + " AND ".join(where)) if where else ""
@@ -262,6 +261,12 @@ class Database:
         with self.conn:
             self.conn.execute(f"UPDATE products SET {assignments} WHERE sku = ?", [*fields.values(), sku])
         return self.get_product(sku)
+
+
+def escape_like(text: str) -> str:
+    """Make LIKE's wildcards literal: a search for '100%' means the text '100%',
+    not '100' followed by anything. Backslash is the escape character."""
+    return text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
 
 def _product(row: sqlite3.Row) -> dict:
