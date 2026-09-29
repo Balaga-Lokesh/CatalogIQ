@@ -14,6 +14,7 @@ from app.config import Settings
 from app.llm import LLMError, get_provider
 from app.llm.mock import CATEGORY_KEYWORDS, MockProvider
 from app.schemas import CATEGORIES, MAX_TAGS
+from app.validation import validate_enrichment
 
 
 def make_mock(latency_ms=0, failure_rate=0.0, seed=None):
@@ -92,6 +93,17 @@ def test_latency_does_not_block_other_calls():
     start = time.perf_counter()
     asyncio.run(run_ten())
     assert time.perf_counter() - start < 0.5
+
+
+@pytest.mark.parametrize("title, description", [
+    ("  AMUL   butter 500G", "pck of 2"),
+    ("boAt Airdopes 141 bluetooth earbuds", ""),
+    ("Mystery gadget thing", None),
+    ("!!!", ""),
+])
+def test_mock_output_always_passes_validation(title, description):
+    # The mock's only failures should be the random ones the brief asks for.
+    validate_enrichment(asyncio.run(make_mock().enrich(title, description)))
 
 
 def test_keyword_categories_are_all_allowed():
