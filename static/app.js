@@ -260,12 +260,12 @@ function emptyState(filtered) {
 const STATUS_LABEL = { enriched: "Cleaned", approved: "Approved", failed: "Failed" };
 
 // One product = one shelf label: clean title, the raw title as the seller
-// typed it, and a stripe in the category's colour.
+// typed it, and a stripe showing its status.
 function productItem(product) {
   const button = el("button", "shelf-label");
   button.type = "button";
   button.dataset.sku = product.sku;
-  button.dataset.category = product.category || "";
+  button.dataset.status = product.status;
 
   const title = el("span", "shelf-title", product.clean_title || "Not cleaned yet");
   const status = el("span", `status ${product.status}`, STATUS_LABEL[product.status] || product.status);
@@ -331,7 +331,6 @@ async function openReview(sku, opener) {
   $("raw-title").textContent = product.raw_title;
   $("raw-description").textContent = product.raw_description || "No description";
   $("review-brand").textContent = product.brand || "not found in the listing";
-  document.querySelector(".cleaned").dataset.category = product.category || "";
 
   const error = $("review-error");
   error.hidden = !product.error;
@@ -374,11 +373,6 @@ $("review-form").addEventListener("submit", async (event) => {
   } finally {
     button.disabled = false;
   }
-});
-
-// The stripe follows the category while editing.
-$("edit-category").addEventListener("change", (event) => {
-  document.querySelector(".cleaned").dataset.category = event.target.value;
 });
 
 $("review-dialog").addEventListener("close", () => {
