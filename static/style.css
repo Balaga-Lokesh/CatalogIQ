@@ -1,34 +1,51 @@
-/* Mobile-first: one column by default, wider layouts only when there is room.
-   Must work on a 360px phone with no horizontal page scroll. */
+/* CatalogIQ - shelf-label look for a catalogue-ops tool.
+   Clean text is set in Bricolage Grotesque; raw seller text in Courier Prime,
+   with its messy spacing preserved, so "before" and "after" read differently.
+   Mobile-first: one column by default, rail + catalogue from 64rem. */
 
 :root {
-  color-scheme: light dark;
-  --bg: #f6f7f9;
-  --surface: #ffffff;
-  --text: #1c1f24;
-  --muted: #5a626e;
-  --border: #8a929c;
-  --accent: #1f5fd1;
-  --accent-text: #ffffff;
-  --ok: #1b7a3a;
-  --bad: #b3261e;
-  --warn: #8a5a00;
+  color-scheme: light;
+  --paper: #eef1ec;        /* label-stock ground */
+  --label: #ffffff;        /* a shelf label */
+  --ink: #1b2a24;          /* bottle-green ink */
+  --ink-soft: #5b6b63;
+  --rule: #c9d1cb;
+  --tag: #f2c230;          /* shelf-tag yellow: the one loud colour */
+  --tag-ink: #1b2a24;
+  --alert: #b42318;
   --focus: #1f5fd1;
+
+  /* category stripes: colour encodes the category */
+  --cat-groceries: #5e8c31;
+  --cat-beverages: #2f6f9f;
+  --cat-personal-care: #9c4f96;
+  --cat-household: #c06a1b;
+  --cat-electronics: #3d4b9e;
+  --cat-fashion: #b03a5b;
+  --cat-home-kitchen: #7a5c3e;
+  --cat-other: #7c8580;
+  --cat-none: #c9d1cb;
+
+  --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --raw: "Courier Prime", "Courier New", monospace;
+
+  --radius-label: 4px;     /* labels are cut paper: nearly square */
+  --radius-control: 6px;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #111418;
-    --surface: #1b1f25;
-    --text: #e8eaed;
-    --muted: #a6adb8;
-    --border: #6b737e;
-    --accent: #7aa7ff;
-    --accent-text: #0b1220;
-    --ok: #6fd28f;
-    --bad: #ff8a80;
-    --warn: #f0c060;
-    --focus: #7aa7ff;
+    color-scheme: dark;
+    --paper: #16201b;
+    --label: #1f2b25;
+    --ink: #e7ede9;
+    --ink-soft: #a3b2aa;
+    --rule: #34443b;
+    --tag: #f2c230;
+    --tag-ink: #1b2a24;
+    --alert: #ff8a7a;
+    --focus: #8fb4ff;
+    --cat-none: #34443b;
   }
 }
 
@@ -36,91 +53,312 @@
 
 body {
   margin: 0;
-  background: var(--bg);
-  color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--display);
   font-size: 1rem;
   line-height: 1.5;
+  font-optical-sizing: auto;
 }
 
-main, .site-header {
-  max-width: 60rem;
+h1, h2, h3 { margin: 0; line-height: 1.15; }
+h2 { font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em; }
+h3 { font-size: 1rem; font-weight: 700; }
+p { margin: 0; }
+b, strong { font-weight: 700; }
+
+.raw-text {
+  font-family: var(--raw);
+  white-space: pre-wrap;           /* keep the seller's double spaces visible */
+  overflow-wrap: anywhere;
+}
+
+/* ---------------------------------------------------------------- masthead */
+
+.masthead {
+  display: grid;
+  gap: 1rem;
+  padding: 1.5rem 1rem 1.25rem;
+  border-bottom: 2px solid var(--ink);
+  max-width: 80rem;
   margin-inline: auto;
-  padding-inline: 1rem;
 }
 
-.site-header { padding-block: 1rem 0; }
-h1 { margin: 0; font-size: 1.6rem; }
-h2 { margin-block: 0 0.75rem; font-size: 1.25rem; }
-h3 { margin-block: 0 0.5rem; font-size: 1.05rem; }
-code { font-size: 0.95em; overflow-wrap: anywhere; }
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.25rem 1rem; }
+h1 { font-size: 2rem; font-weight: 800; letter-spacing: -0.03em; }
+.provider { color: var(--ink-soft); font-size: 0.95rem; }
 
-.card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  padding: 1rem;
-  margin-block: 1rem;
+/* the signature: raw listing, then the shelf label it becomes */
+.signature {
+  margin: 0;
+  display: grid;
+  gap: 0.35rem;
+  align-content: center;
+}
+.signature-raw {
+  color: var(--ink-soft);
+  font-size: 1rem;
+}
+.signature-clean {
+  justify-self: start;
+  background: var(--tag);
+  color: var(--tag-ink);
+  font-weight: 700;
+  font-size: 1.15rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-label);
+  animation: become-label 700ms 350ms cubic-bezier(.2, .8, .2, 1) both;
 }
 
-.muted, .hint { color: var(--muted); }
-.hint { margin: 0 0 0.25rem; font-size: 0.9rem; }
+@keyframes become-label {
+  from { opacity: 0; transform: translateY(-0.6rem); clip-path: inset(0 100% 0 0); }
+  to   { opacity: 1; transform: none; clip-path: inset(0 0 0 0); }
+}
 
-/* ---- form controls: 1rem text (no iOS zoom), 48px tap targets ---- */
+/* ------------------------------------------------------------------ layout */
 
-.field { margin-block-end: 1rem; }
-.field label { display: block; font-weight: 600; margin-block-end: 0.25rem; }
+.layout {
+  max-width: 80rem;
+  margin-inline: auto;
+  padding: 1.25rem 1rem 3rem;
+  display: grid;
+  gap: 1.5rem;
+}
+
+.rail { display: grid; gap: 1.25rem; align-content: start; }
+
+.panel {
+  background: var(--label);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius-label);
+  padding: 1.1rem;
+}
+.panel h2 { margin-bottom: 0.9rem; }
+
+/* ---------------------------------------------------------------- controls */
+
+.field { display: grid; gap: 0.3rem; }
+.field label { font-weight: 600; font-size: 0.95rem; }
+.hint { color: var(--ink-soft); font-size: 0.9rem; }
 
 input, select, button {
   font: inherit;
   min-height: 48px;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-control);
 }
-
 input, select {
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
+  padding: 0.55rem 0.75rem;
+  border: 1.5px solid var(--rule);
+  background: var(--label);
+  color: var(--ink);
 }
-
-input[type="file"] { padding: 0.6rem; }
+input::placeholder { color: var(--ink-soft); opacity: 0.8; }
+input:hover, select:hover { border-color: var(--ink-soft); }
 
 button {
-  padding: 0.5rem 1rem;
-  border: 1px solid var(--border);
-  background: var(--surface);
-  color: var(--text);
+  padding: 0.55rem 1.1rem;
+  border: 1.5px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font-weight: 600;
   cursor: pointer;
 }
-
-button.primary {
-  background: var(--accent);
-  border-color: var(--accent);
-  color: var(--accent-text);
-  font-weight: 600;
-}
-
-button:disabled { opacity: 0.55; cursor: not-allowed; }
+button:hover:not(:disabled) { background: color-mix(in srgb, var(--ink) 8%, transparent); }
+button.primary { background: var(--tag); border-color: var(--tag); color: var(--tag-ink); font-weight: 700; }
+button.primary:hover:not(:disabled) { background: color-mix(in srgb, var(--tag) 85%, #000); }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 :where(a, button, input, select, [tabindex]):focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
 }
 
+.message { font-size: 0.95rem; margin-top: 0.75rem; }
 .message:empty { display: none; }
-.message.error { color: var(--bad); font-weight: 600; }
+.message.error { color: var(--alert); font-weight: 600; }
+
+/* file drop zone: the real <input type=file> stays in the page (and in the
+   tab order); the label on top is what people see and click */
+.dropzone {
+  position: relative;
+  border: 2px dashed var(--ink-soft);
+  border-radius: var(--radius-label);
+  margin-bottom: 0.6rem;
+}
+.dropzone input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+}
+.dropzone label {
+  display: grid;
+  gap: 0.1rem;
+  padding: 1.1rem 1rem;
+  text-align: center;
+  pointer-events: none;
+}
+.dropzone-title { font-weight: 700; overflow-wrap: anywhere; }
+.dropzone-sub { color: var(--ink-soft); font-size: 0.9rem; }
+.dropzone:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+.dropzone.dragging { border-color: var(--ink); background: color-mix(in srgb, var(--tag) 25%, transparent); }
+.dropzone.has-file { border-style: solid; border-color: var(--ink); }
+#upload-form .hint { margin-bottom: 0.9rem; }
+#upload-form button { width: 100%; }
+
+/* ------------------------------------------------------------ job progress */
+
+.job-head { display: flex; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+.job-head h2 { margin-bottom: 0; }
+.job-status { font-weight: 700; }
+.job-status[data-status="running"] { color: var(--cat-beverages); }
+.job-status[data-status="completed"] { color: var(--cat-groceries); }
+
+.job-count { margin: 0.6rem 0 0.5rem; font-size: 1.05rem; }
+.job-count span { font-weight: 800; font-variant-numeric: tabular-nums; }
+
+/* one bar, three segments: how each processed listing was handled */
+.bar {
+  display: flex;
+  height: 14px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ink) 10%, transparent);
+  overflow: hidden;
+}
+.bar-seg { width: 0; transition: width 400ms ease; }
+.seg-llm { background: var(--ink); }
+.seg-cache { background: var(--tag); }
+.seg-failed { background: var(--alert); }
+
+.legend { display: grid; gap: 0.3rem; margin: 0.9rem 0 0; }
+.legend div { display: flex; justify-content: space-between; gap: 1rem; }
+.legend dt { display: flex; align-items: center; gap: 0.5rem; color: var(--ink-soft); }
+.legend dd { margin: 0; font-weight: 700; font-variant-numeric: tabular-nums; }
+.swatch { width: 0.8rem; height: 0.8rem; border-radius: 2px; flex: none; }
+.job-id { margin-top: 0.8rem; color: var(--ink-soft); font-size: 0.85rem; overflow-wrap: anywhere; }
+
+/* --------------------------------------------------------------- catalogue */
+
+.catalogue-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1rem; }
+.catalogue-head h2 { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; }
+.summary { color: var(--ink-soft); }
+
+.filters { display: grid; gap: 0.75rem; margin: 1rem 0 1.25rem; }
+
+/* the shelf: each product is a label with a category stripe on its left edge */
+.shelf { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+
+.shelf-label {
+  --stripe: var(--cat-none);
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.2rem 1rem;
+  text-align: start;
+  padding: 0.8rem 1rem 0.8rem 1.1rem;
+  background: var(--label);
+  border: 1px solid var(--rule);
+  border-left: 6px solid var(--stripe);
+  border-radius: var(--radius-label);
+  font-weight: 400;
+}
+.shelf-label:hover:not(:disabled) { background: var(--label); border-color: var(--ink-soft); border-left-color: var(--stripe); }
+
+.shelf-title { font-weight: 700; font-size: 1.08rem; line-height: 1.3; overflow-wrap: anywhere; }
+.shelf-raw { grid-column: 1; color: var(--ink-soft); font-size: 0.92rem; }
+.shelf-meta { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; font-size: 0.88rem; color: var(--ink-soft); }
+.shelf-category { font-weight: 600; color: var(--stripe); }
+.shelf-label .status { grid-column: 2; grid-row: 1; align-self: start; }
+
+.empty {
+  padding: 2rem 1rem;
+  text-align: center;
+  border: 2px dashed var(--rule);
+  border-radius: var(--radius-label);
+  color: var(--ink-soft);
+}
+.empty strong { display: block; color: var(--ink); font-size: 1.1rem; margin-bottom: 0.25rem; }
+
+/* status is always written out, so colour is never the only signal */
+.status { font-size: 0.85rem; font-weight: 700; white-space: nowrap; }
+.status::before { content: ""; display: inline-block; width: 0.55rem; height: 0.55rem; border-radius: 50%; margin-right: 0.35rem; background: currentColor; }
+.status.enriched { color: var(--cat-beverages); }
+.status.approved { color: var(--cat-groceries); }
+.status.failed { color: var(--alert); }
+
+[data-category="Groceries"] { --stripe: var(--cat-groceries); }
+[data-category="Beverages"] { --stripe: var(--cat-beverages); }
+[data-category="Personal Care"] { --stripe: var(--cat-personal-care); }
+[data-category="Household"] { --stripe: var(--cat-household); }
+[data-category="Electronics"] { --stripe: var(--cat-electronics); }
+[data-category="Fashion"] { --stripe: var(--cat-fashion); }
+[data-category="Home & Kitchen"] { --stripe: var(--cat-home-kitchen); }
+[data-category="Other"] { --stripe: var(--cat-other); }
+
+.pager { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; margin-top: 1.25rem; }
+#page-info { color: var(--ink-soft); text-align: center; font-variant-numeric: tabular-nums; }
+
+/* ------------------------------------------------------------ review dialog */
+
+dialog {
+  width: min(56rem, calc(100vw - 1rem));
+  max-height: calc(100dvh - 1rem);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-label);
+  background: var(--label);
+  color: var(--ink);
+  box-shadow: 0 1.5rem 4rem rgb(0 0 0 / 0.35);
+}
+dialog::backdrop { background: rgb(22 32 27 / 0.6); }
+dialog form { padding: 1.25rem; }
+
+.review-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 0.5rem; }
+#review-sku { font-weight: 400; color: var(--ink-soft); }
+
+.compare { display: grid; gap: 1rem; margin-top: 1rem; }
+.compare section { min-width: 0; padding: 1rem; border-radius: var(--radius-label); }
+.compare h3 { margin-bottom: 0.75rem; }
+
+/* the "before" side looks like a typed slip of paper */
+.as-listed {
+  background: color-mix(in srgb, var(--tag) 14%, var(--label));
+  border: 1px dashed var(--ink-soft);
+}
+.raw-label { color: var(--ink-soft); font-size: 0.85rem; margin-top: 0.6rem; }
+.as-listed .raw-text { font-size: 1.02rem; }
+
+.cleaned { border: 1px solid var(--rule); border-left: 6px solid var(--stripe, var(--cat-none)); display: grid; gap: 0.9rem; align-content: start; }
+.cleaned h3 { margin-bottom: 0; }
+.brand-line { color: var(--ink-soft); }
+.brand-line strong { color: var(--ink); }
+
+.error-box {
+  margin-top: 1rem;
+  padding: 0.7rem 0.9rem;
+  border-left: 5px solid var(--alert);
+  background: color-mix(in srgb, var(--alert) 10%, var(--label));
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.error-box strong { color: var(--alert); }
+
+.actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 0.6rem; margin-top: 1.25rem; }
+
+/* ------------------------------------------------------------------ utility */
 
 .skip-link {
   position: absolute;
-  inset-inline-start: 1rem;
+  left: 1rem;
   top: -4rem;
-  background: var(--surface);
-  padding: 0.5rem 1rem;
-  border: 2px solid var(--focus);
-  border-radius: 0.5rem;
   z-index: 10;
+  padding: 0.5rem 1rem;
+  background: var(--label);
+  border: 2px solid var(--focus);
+  border-radius: var(--radius-control);
 }
 .skip-link:focus { top: 1rem; }
 
@@ -136,119 +374,24 @@ button:disabled { opacity: 0.55; cursor: not-allowed; }
   white-space: nowrap;
 }
 
-/* ---- job progress ---- */
-
-progress {
-  width: 100%;
-  height: 1.25rem;
-  accent-color: var(--accent);
-}
-
-.counts {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.5rem;
-  margin: 0.75rem 0 0;
-}
-.counts div {
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-}
-.counts dt { color: var(--muted); font-size: 0.85rem; }
-.counts dd { margin: 0; font-size: 1.3rem; font-weight: 700; }
-
-/* ---- catalogue ---- */
-
-.filters { display: grid; gap: 0 1rem; }
-
-.product-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 0.5rem;
-}
-
-.product-button {
-  width: 100%;
-  text-align: start;
-  display: grid;
-  gap: 0.15rem;
-  padding: 0.75rem;
-}
-.product-title { font-weight: 600; overflow-wrap: anywhere; }
-.product-meta { color: var(--muted); font-size: 0.9rem; overflow-wrap: anywhere; }
-.product-button .badge { justify-self: start; }
-
-/* status is shown as TEXT inside the badge, so colour is never the only cue */
-.badge {
-  display: inline-block;
-  font-size: 0.8rem;
-  font-weight: 700;
-  padding: 0.05rem 0.5rem;
-  border-radius: 999px;
-  border: 1px solid currentColor;
-}
-.badge.enriched { color: var(--accent); }
-.badge.approved { color: var(--ok); }
-.badge.failed { color: var(--bad); }
-
-.pager {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-block-start: 1rem;
-}
-#page-info { text-align: center; }
-
-/* ---- review dialog ---- */
-
-dialog {
-  width: min(48rem, calc(100vw - 1rem));
-  max-height: calc(100dvh - 1rem);
-  padding: 1rem;
-  border: 1px solid var(--border);
-  border-radius: 0.75rem;
-  background: var(--surface);
-  color: var(--text);
-}
-dialog::backdrop { background: rgb(0 0 0 / 0.5); }
-
-.side-by-side { display: grid; gap: 1rem; }
-.panel {
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
-  padding: 0.75rem;
-  min-width: 0;
-}
-.panel dt { color: var(--muted); font-size: 0.85rem; }
-.panel dd { margin: 0 0 0.5rem; overflow-wrap: anywhere; white-space: pre-wrap; }
-
-.error-box {
-  border: 2px solid var(--bad);
-  color: var(--bad);
-  border-radius: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  overflow-wrap: anywhere;
-}
-
-.actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-/* ---- wider screens ---- */
+/* ------------------------------------------------------------ wider screens */
 
 @media (min-width: 40rem) {
-  .filters { grid-template-columns: 2fr 1fr; }
-  .counts { grid-template-columns: repeat(4, 1fr); }
-  .side-by-side { grid-template-columns: 1fr 1fr; }
+  .filters { grid-template-columns: 1fr 14rem; align-items: end; }
+  .compare { grid-template-columns: 1fr 1fr; }
+  .masthead { padding-inline: 1.5rem; }
+  .layout { padding-inline: 1.5rem; }
+}
+
+@media (min-width: 64rem) {
+  .masthead { grid-template-columns: auto 1fr; align-items: end; gap: 2.5rem; }
+  .signature { justify-self: end; justify-items: end; text-align: end; }
+  .signature-clean { justify-self: end; }
+  .layout { grid-template-columns: 21rem 1fr; gap: 2rem; }
+  .rail { position: sticky; top: 1rem; align-self: start; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  * { scroll-behavior: auto !important; transition: none !important; }
+  .signature-clean { animation: none; }
+  .bar-seg { transition: none; }
 }

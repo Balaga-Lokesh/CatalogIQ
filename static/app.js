@@ -16,6 +16,14 @@ const SEARCH_DELAY_MS = 300; // wait for a pause in typing before searching
 
 const $ = (id) => document.getElementById(id);
 
+// Create an element with a class and text (text via textContent: never HTML).
+function el(tag, className, text) {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text !== undefined) node.textContent = text;
+  return node;
+}
+
 // ---------------------------------------------------------------------------
 // API helper: returns parsed JSON, or throws an Error with the server's message
 // ---------------------------------------------------------------------------
@@ -94,6 +102,21 @@ function setMessage(el, text, isError = false) {
   el.classList.toggle("error", isError);
 }
 
+// Drop zone: the file input covers the zone, so dropping a file on it works
+// natively; these listeners only give visual feedback and show the file name.
+const dropzone = $("dropzone");
+$("csv-file").addEventListener("change", () => {
+  const file = $("csv-file").files[0];
+  $("file-name").textContent = file ? file.name : "Choose a CSV file";
+  dropzone.classList.toggle("has-file", Boolean(file));
+});
+for (const type of ["dragenter", "dragover"]) {
+  dropzone.addEventListener(type, () => dropzone.classList.add("dragging"));
+}
+for (const type of ["dragleave", "drop"]) {
+  dropzone.addEventListener(type, () => dropzone.classList.remove("dragging"));
+}
+
 $("upload-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const message = $("upload-message");
@@ -106,7 +129,7 @@ $("upload-form").addEventListener("submit", async (event) => {
     const products = rowsToProducts(parseCsv(await file.text()));
     setMessage(message, `Sending ${products.length} listings...`);
     const job = await api("/api/jobs", { method: "POST", body: JSON.stringify({ products }) });
-    setMessage(message, `Job ${job.id} started with ${job.total} listings.`);
+    setMessage(message, `Started: ${job.total} listings are being cleaned.`);
     startTracking(job);
   } catch (err) {
     setMessage(message, err.message, true);
@@ -141,26 +164,42 @@ async function poll(jobId) {
     pollCount++;
     if (job.status === "completed") {
       $("job-announce").textContent =
-        `Job finished: ${job.done} of ${job.total} done, ${job.failed} failed, ${job.cache_hits} cache hits.`;
+        `Job finished: ${job.done} of ${job.total} listings processed, ${job.cache_hits} reused from cache, ${job.failed} failed.`;
       loadProducts();
       return;
     }
     if (pollCount % 5 === 0) loadProducts(); // show new products appearing, every ~5 s
   } catch (err) {
-    $("job-status").textContent = `could not refresh (${err.message}), retrying`;
+    $("job-status").textContent = "Reconnecting...";
   }
   pollTimer = setTimeout(() => poll(jobId), POLL_MS);
 }
 
+const STATUS_TEXT = { queued: "Queued", running: "Running", completed: "Finished" };
+
 function renderJob(job) {
+  // Every processed listing was either cleaned by an LLM call, reused from
+  // the cache, or failed. The bar shows those three parts of the total.
+  const llm = job.done - job.failed - job.cache_hits;
+  const total = Math.max(job.total, 1);
+  const pct = (n) => `${(100 * n) / total}%`;
+
   $("job-id").textContent = job.id;
-  $("job-status").textContent = job.status;
-  $("job-progress").max = Math.max(job.total, 1);
-  $("job-progress").value = job.done;
+  $("job-status").textContent = STATUS_TEXT[job.status] || job.status;
+  $("job-status").dataset.status = job.status;
   $("count-done").textContent = job.done;
   $("count-total").textContent = job.total;
-  $("count-failed").textContent = job.failed;
+  $("count-llm").textContent = llm;
   $("count-cache").textContent = job.cache_hits;
+  $("count-failed").textContent = job.failed;
+  $("seg-llm").style.width = pct(llm);
+  $("seg-cache").style.width = pct(job.cache_hits);
+  $("seg-failed").style.width = pct(job.failed);
+
+  const bar = $("job-progress");
+  bar.setAttribute("aria-valuemax", job.total);
+  bar.setAttribute("aria-valuenow", job.done);
+  bar.setAttribute("aria-valuetext", `${job.done} of ${job.total} listings processed`);
 }
 
 // ---------------------------------------------------------------------------
@@ -193,37 +232,53 @@ async function loadProducts() {
 
 function renderProducts({ items, page, page_size, total }) {
   const pages = Math.max(1, Math.ceil(total / page_size));
-  $("results-summary").textContent =
-    total === 0 ? "No products match." : `${total} product${total === 1 ? "" : "s"}`;
+  const filtered = Boolean(state.q || state.category);
+  $("results-summary").textContent = total === 0 ? "" : `${total} product${total === 1 ? "" : "s"}`;
   $("page-info").textContent = `Page ${page} of ${pages}`;
   $("prev-page").disabled = page <= 1;
   $("next-page").disabled = page >= pages;
 
   const list = $("product-list");
-  list.replaceChildren(...items.map(productItem));
+  if (items.length) {
+    list.replaceChildren(...items.map(productItem));
+  } else {
+    list.replaceChildren(emptyState(filtered));
+  }
 }
 
+function emptyState(filtered) {
+  const li = el("li", "empty");
+  if (filtered) {
+    li.append(el("strong", "", "No products match"), "Try another search term or category.");
+  } else {
+    li.append(el("strong", "", "The catalogue is empty"),
+      "Upload a CSV of listings to start. data/sample_listings.csv has 240 to try.");
+  }
+  return li;
+}
+
+const STATUS_LABEL = { enriched: "Cleaned", approved: "Approved", failed: "Failed" };
+
+// One product = one shelf label: clean title, the raw title as the seller
+// typed it, and a stripe in the category's colour.
 function productItem(product) {
-  const li = document.createElement("li");
-  const button = document.createElement("button");
+  const button = el("button", "shelf-label");
   button.type = "button";
-  button.className = "product-button";
   button.dataset.sku = product.sku;
+  button.dataset.category = product.category || "";
 
-  const title = document.createElement("span");
-  title.className = "product-title";
-  title.textContent = product.clean_title || product.raw_title;
+  const title = el("span", "shelf-title", product.clean_title || "Not cleaned yet");
+  const status = el("span", `status ${product.status}`, STATUS_LABEL[product.status] || product.status);
+  const raw = el("span", "shelf-raw raw-text", product.raw_title);
 
-  const meta = document.createElement("span");
-  meta.className = "product-meta";
-  meta.textContent = [product.sku, product.category, product.brand].filter(Boolean).join(" · ");
+  const meta = el("span", "shelf-meta");
+  meta.append(el("span", "", product.sku));
+  if (product.category) meta.append(el("span", "shelf-category", product.category));
+  if (product.brand) meta.append(el("span", "", product.brand));
 
-  const badge = document.createElement("span");
-  badge.className = `badge ${product.status}`;
-  badge.textContent = product.status;
-
-  button.append(title, meta, badge);
+  button.append(title, status, raw, meta);
   button.addEventListener("click", () => openReview(product.sku, button));
+  const li = el("li");
   li.append(button);
   return li;
 }
@@ -271,15 +326,20 @@ async function openReview(sku, opener) {
   }
   reviewing = sku;
   $("review-sku").textContent = product.sku;
-  $("review-status").textContent = product.status;
-  $("review-status").className = `badge ${product.status}`;
+  $("review-status").textContent = STATUS_LABEL[product.status] || product.status;
+  $("review-status").className = `status ${product.status}`;
   $("raw-title").textContent = product.raw_title;
-  $("raw-description").textContent = product.raw_description || "(none)";
-  $("review-brand").textContent = product.brand || "unknown";
+  $("raw-description").textContent = product.raw_description || "No description";
+  $("review-brand").textContent = product.brand || "not found in the listing";
+  document.querySelector(".cleaned").dataset.category = product.category || "";
 
   const error = $("review-error");
   error.hidden = !product.error;
-  error.textContent = product.error ? `Enrichment failed: ${product.error}` : "";
+  error.replaceChildren();
+  if (product.error) {
+    error.append(el("strong", "", "The LLM could not clean this listing. "),
+      `${product.error}. Fill in the fields yourself and approve.`);
+  }
 
   $("edit-title").value = product.clean_title || "";
   $("edit-category").value = product.category || "";
@@ -308,12 +368,17 @@ $("review-form").addEventListener("submit", async (event) => {
     $("review-dialog").close();
     await loadProducts();
     // The list was re-rendered, so focus the NEW button for the same product.
-    document.querySelector(`.product-button[data-sku="${CSS.escape(reviewing)}"]`)?.focus();
+    document.querySelector(`.shelf-label[data-sku="${CSS.escape(reviewing)}"]`)?.focus();
   } catch (err) {
     setMessage($("review-message"), err.message, true);
   } finally {
     button.disabled = false;
   }
+});
+
+// The stripe follows the category while editing.
+$("edit-category").addEventListener("change", (event) => {
+  document.querySelector(".cleaned").dataset.category = event.target.value;
 });
 
 $("review-dialog").addEventListener("close", () => {
@@ -342,8 +407,9 @@ async function init() {
   loadProducts();
   try {
     const health = await api("/api/health");
+    const name = health.llm_provider === "mock" ? "the mock LLM" : health.llm_provider;
     $("provider-info").textContent =
-      `LLM provider: ${health.llm_provider} · up to ${health.llm_concurrency} calls at once`;
+      `Cleaning listings with ${name}, up to ${health.llm_concurrency} at a time`;
   } catch { /* the header line is optional */ }
 
   // Reloading the page keeps showing the last job's progress.
@@ -351,7 +417,11 @@ async function init() {
   try { lastJob = localStorage.getItem("catalogiq.lastJob"); } catch { /* ignore */ }
   if (lastJob) {
     try { startTracking(await api(`/api/jobs/${encodeURIComponent(lastJob)}`)); }
-    catch { /* job no longer exists (e.g. new database) */ }
+    catch {
+      // The job no longer exists (e.g. a fresh database): forget it, so we
+      // don't ask for it again on every page load.
+      try { localStorage.removeItem("catalogiq.lastJob"); } catch { /* ignore */ }
+    }
   }
 }
 

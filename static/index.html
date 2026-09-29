@@ -4,53 +4,79 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CatalogIQ</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Courier+Prime:wght@400;700&display=swap">
   <link rel="stylesheet" href="/static/style.css">
   <script src="/static/app.js" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#catalogue-heading">Skip to catalogue</a>
 
-  <header class="site-header">
-    <h1>CatalogIQ</h1>
-    <p id="provider-info" class="muted"></p>
+  <header class="masthead">
+    <div class="brand">
+      <h1>CatalogIQ</h1>
+      <p id="provider-info" class="provider"></p>
+    </div>
+    <!-- The one thing this tool does, shown once: a seller's listing becoming a shelf label -->
+    <figure class="signature" aria-label="Example: a messy seller listing cleaned into a catalogue title">
+      <p class="signature-raw"><span class="raw-text">  AMUL   butter 500G  pck of 2</span></p>
+      <p class="signature-clean">Amul Butter 500 g (Pack of 2)</p>
+    </figure>
   </header>
 
-  <main id="content">
-    <!-- 1. Upload a CSV, parsed in the browser, sent as a job -->
-    <section aria-labelledby="upload-heading" class="card">
-      <h2 id="upload-heading">Upload listings</h2>
-      <form id="upload-form">
-        <div class="field">
-          <label for="csv-file">CSV file</label>
-          <p id="csv-hint" class="hint">Columns: <code>sku</code>, <code>raw_title</code>, and optionally <code>raw_description</code>.</p>
-          <input id="csv-file" name="csv" type="file" accept=".csv,text/csv" aria-describedby="csv-hint" required>
-        </div>
-        <button type="submit" class="primary">Upload and start job</button>
-        <p id="upload-message" class="message" role="status"></p>
-      </form>
-    </section>
+  <div class="layout">
+    <aside class="rail">
+      <!-- 1. Upload a CSV, parsed in the browser, sent as a job -->
+      <section class="panel" aria-labelledby="upload-heading">
+        <h2 id="upload-heading">Upload listings</h2>
+        <form id="upload-form">
+          <div class="dropzone" id="dropzone">
+            <input id="csv-file" name="csv" type="file" accept=".csv,text/csv" aria-describedby="csv-hint" required>
+            <label for="csv-file">
+              <span class="dropzone-title" id="file-name">Choose a CSV file</span>
+              <span class="dropzone-sub">or drop it here</span>
+            </label>
+          </div>
+          <p id="csv-hint" class="hint">Needs <b>sku</b> and <b>raw_title</b> columns; <b>raw_description</b> is optional.</p>
+          <button type="submit" class="primary">Start enrichment</button>
+          <p id="upload-message" class="message" role="status"></p>
+        </form>
+      </section>
 
-    <!-- 2. Live job progress (polled at most once a second) -->
-    <section id="progress-section" aria-labelledby="progress-heading" class="card" hidden>
-      <h2 id="progress-heading">Job progress</h2>
-      <p class="muted">Job <code id="job-id"></code> · <span id="job-status"></span></p>
-      <progress id="job-progress" max="1" value="0" aria-labelledby="progress-heading"></progress>
-      <dl class="counts">
-        <div><dt>Done</dt><dd id="count-done">0</dd></div>
-        <div><dt>Total</dt><dd id="count-total">0</dd></div>
-        <div><dt>Failed</dt><dd id="count-failed">0</dd></div>
-        <div><dt>Cache hits</dt><dd id="count-cache">0</dd></div>
-      </dl>
-      <p id="job-announce" class="visually-hidden" aria-live="polite"></p>
-    </section>
+      <!-- 2. Live job progress (polled at most once a second) -->
+      <section id="progress-section" class="panel job" aria-labelledby="progress-heading" hidden>
+        <div class="job-head">
+          <h2 id="progress-heading">Current job</h2>
+          <span id="job-status" class="job-status"></span>
+        </div>
+        <p class="job-count"><span id="count-done">0</span> of <span id="count-total">0</span> listings processed</p>
+        <div id="job-progress" class="bar" role="progressbar" aria-labelledby="progress-heading"
+             aria-valuemin="0" aria-valuemax="1" aria-valuenow="0">
+          <span class="bar-seg seg-llm" id="seg-llm"></span>
+          <span class="bar-seg seg-cache" id="seg-cache"></span>
+          <span class="bar-seg seg-failed" id="seg-failed"></span>
+        </div>
+        <dl class="legend">
+          <div><dt><span class="swatch seg-llm"></span>Cleaned by the LLM</dt><dd id="count-llm">0</dd></div>
+          <div><dt><span class="swatch seg-cache"></span>Reused from cache</dt><dd id="count-cache">0</dd></div>
+          <div><dt><span class="swatch seg-failed"></span>Failed</dt><dd id="count-failed">0</dd></div>
+        </dl>
+        <p class="job-id">Job <code id="job-id"></code></p>
+        <p id="job-announce" class="visually-hidden" aria-live="polite"></p>
+      </section>
+    </aside>
 
     <!-- 3. Browse the catalogue -->
-    <section aria-labelledby="catalogue-heading" class="card">
-      <h2 id="catalogue-heading" tabindex="-1">Catalogue</h2>
+    <main id="content" class="catalogue" aria-labelledby="catalogue-heading">
+      <div class="catalogue-head">
+        <h2 id="catalogue-heading" tabindex="-1">Catalogue</h2>
+        <p id="results-summary" class="summary" aria-live="polite"></p>
+      </div>
       <form id="filters" role="search" class="filters">
-        <div class="field">
+        <div class="field grow">
           <label for="search">Search titles</label>
-          <input id="search" name="q" type="search" autocomplete="off" enterkeyhint="search">
+          <input id="search" name="q" type="search" autocomplete="off" enterkeyhint="search" placeholder="e.g. basmati, Colgate, 500 g">
         </div>
         <div class="field">
           <label for="category-filter">Category</label>
@@ -59,36 +85,39 @@
           </select>
         </div>
       </form>
-      <p id="results-summary" class="muted" aria-live="polite"></p>
-      <ul id="product-list" class="product-list" role="list"></ul>
+
+      <ul id="product-list" class="shelf" role="list"></ul>
+
       <nav class="pager" aria-label="Catalogue pages">
         <button type="button" id="prev-page">Previous</button>
         <span id="page-info"></span>
         <button type="button" id="next-page">Next</button>
       </nav>
-    </section>
-  </main>
+    </main>
+  </div>
 
   <!-- 4. Review a product: raw vs cleaned side by side, edit, approve -->
   <dialog id="review-dialog" aria-labelledby="review-heading">
     <form id="review-form" method="dialog">
-      <h2 id="review-heading">Review <code id="review-sku"></code></h2>
-      <p>Status: <span id="review-status" class="badge"></span></p>
+      <div class="review-head">
+        <h2 id="review-heading">Review <span id="review-sku"></span></h2>
+        <span id="review-status" class="status"></span>
+      </div>
       <p id="review-error" class="error-box" hidden></p>
 
-      <div class="side-by-side">
-        <section aria-labelledby="raw-heading" class="panel">
-          <h3 id="raw-heading">Raw listing</h3>
-          <dl>
-            <dt>Title</dt><dd id="raw-title"></dd>
-            <dt>Description</dt><dd id="raw-description"></dd>
-          </dl>
+      <div class="compare">
+        <section class="as-listed" aria-labelledby="raw-heading">
+          <h3 id="raw-heading">As the seller listed it</h3>
+          <p class="raw-label">Title</p>
+          <p id="raw-title" class="raw-text"></p>
+          <p class="raw-label">Description</p>
+          <p id="raw-description" class="raw-text"></p>
         </section>
 
-        <section aria-labelledby="clean-heading" class="panel">
-          <h3 id="clean-heading">Cleaned</h3>
+        <section class="cleaned" aria-labelledby="clean-heading">
+          <h3 id="clean-heading">Catalogue entry</h3>
           <div class="field">
-            <label for="edit-title">Clean title</label>
+            <label for="edit-title">Title</label>
             <input id="edit-title" name="clean_title" required>
           </div>
           <div class="field">
@@ -97,10 +126,10 @@
           </div>
           <div class="field">
             <label for="edit-tags">Tags</label>
-            <p id="tags-hint" class="hint">Comma-separated, up to 5.</p>
+            <p id="tags-hint" class="hint">Separate with commas, up to 5.</p>
             <input id="edit-tags" name="tags" aria-describedby="tags-hint">
           </div>
-          <p class="muted">Brand: <span id="review-brand"></span></p>
+          <p class="brand-line">Brand: <strong id="review-brand"></strong></p>
         </section>
       </div>
 
