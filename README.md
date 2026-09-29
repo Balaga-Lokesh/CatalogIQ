@@ -99,7 +99,9 @@ LLM_PROVIDER=ollama python -m app
 
 **OpenRouter / Gemini:** set `LLM_PROVIDER=openrouter` with `OPENROUTER_API_KEY`, or `LLM_PROVIDER=gemini` with `GEMINI_API_KEY`. Free model names change over time; if a default model is retired, set `LLM_MODEL`.
 
-API keys are read only from environment variables. `.env` is git-ignored, and `.env.example` lists every setting without real values.
+**Using a `.env` file instead:** copy `.env.example` to `.env` and fill it in, for example `LLM_PROVIDER=groq` and `GROQ_API_KEY=...`. The app reads it at startup. Real environment variables win over the file.
+
+API keys come only from environment variables or `.env`. `.env` is git-ignored, and `.env.example` lists every setting without real values.
 
 ## Run the tests
 

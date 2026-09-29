@@ -6,10 +6,17 @@ Real-provider settings (only used when LLM_PROVIDER is not "mock"):
   LLM_MODEL      override the provider's default model
   LLM_BASE_URL   override the provider's API address
   LLM_TIMEOUT_S  seconds before a call is abandoned (default 30)
+
+Values can also be put in a `.env` file in the project root (git-ignored,
+so API keys never reach the repository). Real environment variables win
+over the file.
 """
 
 import os
 from dataclasses import dataclass
+from pathlib import Path
+
+ENV_FILE = Path(__file__).resolve().parent.parent / ".env"
 
 
 @dataclass(frozen=True)
@@ -25,7 +32,24 @@ class Settings:
     llm_timeout_s: float = 30.0
 
 
+def load_env_file(path: Path = ENV_FILE) -> None:
+    """Minimal .env support: KEY=VALUE lines, # comments, optional quotes.
+    A variable already set in the real environment is never overridden,
+    and empty values are skipped (so `GROQ_API_KEY=` means "not set")."""
+    if not path.is_file():
+        return
+    for line in path.read_text(encoding="utf-8").splitlines():
+        line = line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key, value = key.strip(), value.strip().strip('"').strip("'")
+        if key and value and key not in os.environ:
+            os.environ[key] = value
+
+
 def load_settings() -> Settings:
+    load_env_file()
     return Settings(
         llm_provider=os.getenv("LLM_PROVIDER", "mock").strip().lower(),
         llm_concurrency=int(os.getenv("LLM_CONCURRENCY", "5")),
