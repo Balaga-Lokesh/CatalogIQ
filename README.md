@@ -93,7 +93,7 @@ python -m app
 
 So the app has a small pacer ([app/ratelimit.py](app/ratelimit.py)) that spaces call *starts* evenly. For `groq` it defaults to 14 per minute, one call every ~4.3 s; change it with `LLM_MAX_RPM`. It works alongside the concurrency limit: the semaphore caps calls *in progress*, and the pacer caps calls *started per minute*. Cache hits skip both.
 
-Measured run: the first 30 sample rows took 120 s, with 30/30 done, 0 failed, 0 errors, no 429s, and 2 cache hits. The 240-row sample needs about 15 minutes on the free tier, so for a live demo with the real LLM, use a small file.
+Measured run: the first 30 sample rows took 120 s, with 30/30 done, 0 failed, 0 errors, no 429s, and 2 cache hits. The 240-row sample needs about 15 minutes on the free tier, so for a live demo with the real LLM, use [`data/sample_small.csv`](data/sample_small.csv): the first 25 rows, about 2 minutes.
 
 The default model is `openai/gpt-oss-120b` with `reasoning_effort: low`. Of the free models I compared, it put the most listings in the right category, and low effort cuts it from about 650 to about 520 tokens per call with the same answers.
 
