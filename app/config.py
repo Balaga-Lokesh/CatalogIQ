@@ -6,6 +6,8 @@ Real-provider settings (only used when LLM_PROVIDER is not "mock"):
   LLM_MODEL      override the provider's default model
   LLM_BASE_URL   override the provider's API address
   LLM_TIMEOUT_S  seconds before a call is abandoned (default 30)
+  LLM_MAX_RPM    max LLM calls started per minute (0 = no limit). Default:
+                 no limit, except groq, which defaults to 14 (free tier).
 
 Values can also be put in a `.env` file in the project root (git-ignored,
 so API keys never reach the repository). Real environment variables win
@@ -30,6 +32,7 @@ class Settings:
     llm_model: str | None = None
     llm_base_url: str | None = None
     llm_timeout_s: float = 30.0
+    llm_max_rpm: float | None = None   # None = the provider's default
 
 
 def load_env_file(path: Path = ENV_FILE) -> None:
@@ -60,4 +63,5 @@ def load_settings() -> Settings:
         llm_model=os.getenv("LLM_MODEL") or None,
         llm_base_url=os.getenv("LLM_BASE_URL") or None,
         llm_timeout_s=float(os.getenv("LLM_TIMEOUT_S", "30")),
+        llm_max_rpm=float(os.environ["LLM_MAX_RPM"]) if os.getenv("LLM_MAX_RPM") else None,
     )

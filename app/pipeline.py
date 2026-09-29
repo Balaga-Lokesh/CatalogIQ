@@ -23,6 +23,7 @@ from typing import Awaitable, Callable, Protocol
 from app.llm.base import LLMError, LLMProvider
 from app.metrics import Metrics
 from app.normalize import content_key
+from app.ratelimit import RateLimiter
 from app.schemas import Enrichment
 from app.validation import validate_enrichment
 
@@ -75,8 +76,10 @@ class Enricher:
         backoff_base_s: float = BACKOFF_BASE_S,
         sleep: Callable[[float], Awaitable[None]] = asyncio.sleep,
         rng: random.Random | None = None,
+        rate_limiter: RateLimiter | None = None,
     ) -> None:
         self._provider = provider
+        self._rate_limiter = rate_limiter   # optional: paces call starts per minute
         self._semaphore = asyncio.Semaphore(concurrency)
         self._metrics = metrics
         self._cache = cache
@@ -138,8 +141,11 @@ class Enricher:
         return EnrichResult(None, error=f"failed after {self._max_attempts} attempts: {last_error}")
 
     async def _call_llm(self, raw_title: str, raw_description: str) -> str:
-        # The semaphore wraps ONE attempt, not the retry loop: a task sleeping
-        # in backoff gives its slot to someone else.
+        # Rate limit first (waiting for our turn is not "in progress"), then
+        # the semaphore. The semaphore wraps ONE attempt, not the retry loop:
+        # a task sleeping in backoff gives its slot to someone else.
+        if self._rate_limiter is not None:
+            await self._rate_limiter.acquire()
         async with self._semaphore:
             self._metrics.call_started()
             try:

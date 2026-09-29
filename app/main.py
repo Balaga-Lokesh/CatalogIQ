@@ -20,9 +20,10 @@ from starlette.exceptions import HTTPException
 from app.config import Settings, load_settings
 from app.db import MAX_PAGE_SIZE, Database
 from app.jobs import JobManager
-from app.llm import get_provider
+from app.llm import get_provider, max_calls_per_minute
 from app.metrics import Metrics
 from app.pipeline import Enricher
+from app.ratelimit import RateLimiter
 from app.schemas import CATEGORIES, MAX_TAGS
 
 log = logging.getLogger(__name__)
@@ -45,10 +46,14 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         db = Database(settings.db_path)
         metrics = Metrics()
         provider = get_provider(settings)
-        enricher = Enricher(provider, settings.llm_concurrency, metrics, db)
+        rpm = max_calls_per_minute(settings)
+        limiter = RateLimiter(rpm) if rpm else None
+        enricher = Enricher(provider, settings.llm_concurrency, metrics, db, rate_limiter=limiter)
         jobs = JobManager(db, enricher, workers_per_job=settings.llm_concurrency)
         app.state.settings, app.state.db, app.state.metrics, app.state.jobs = settings, db, metrics, jobs
 
+        log.info("LLM provider %s, concurrency %d, max %s calls/min",
+                 settings.llm_provider, settings.llm_concurrency, rpm or "unlimited")
         resumed = jobs.resume_unfinished()      # crash recovery
         if resumed:
             log.info("resumed %d unfinished job(s)", len(resumed))

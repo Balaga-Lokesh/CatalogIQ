@@ -25,6 +25,7 @@ class Preset:
     key_env: str | None      # environment variable holding the API key (None = no key)
     json_mode: bool          # send response_format={"type": "json_object"}
     extra: tuple = ()        # extra request fields, as (name, value) pairs
+    max_rpm: float | None = None   # default pacing (calls started per minute)
 
 
 # Free models change over time: override with LLM_MODEL if a default is retired.
@@ -33,7 +34,7 @@ class Preset:
 # (~650 -> ~520 tokens per call), which matters under a tokens-per-minute limit.
 PRESETS = {
     "groq": Preset("https://api.groq.com/openai/v1", "openai/gpt-oss-120b", "GROQ_API_KEY", True,
-                   extra=(("reasoning_effort", "low"),)),
+                   extra=(("reasoning_effort", "low"),), max_rpm=14),
     "ollama": Preset("http://localhost:11434/v1", "llama3.2:3b", None, True),
     "openrouter": Preset("https://openrouter.ai/api/v1", "meta-llama/llama-3.2-3b-instruct:free",
                          "OPENROUTER_API_KEY", False),
