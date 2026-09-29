@@ -42,6 +42,16 @@ def test_brief_example():
     assert "butter" in data["tags"]
 
 
+@pytest.mark.parametrize("title, brand", [
+    ("Classic Coffee Nescafe 100 G", "Nescafe"),       # brand not first
+    ("TATA SAMPANN toor dal 1 kg", "Tata Sampann"),     # longest match wins
+    ("Tata tea gold", "Tata"),
+    ("Mild tamarind chutney", None),                    # "Mi" must match a whole word only
+])
+def test_brand_found_anywhere_as_whole_words(title, brand):
+    assert json.loads(asyncio.run(make_mock().enrich(title)))["brand"] == brand
+
+
 def test_unknown_product_gets_other_and_null_brand():
     data = json.loads(asyncio.run(make_mock().enrich("Mystery gadget thing")))
     assert data["category"] == "Other"

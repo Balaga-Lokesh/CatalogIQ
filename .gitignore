@@ -12,6 +12,8 @@ venv/
 
 # Local database
 *.db
+*.db-wal
+*.db-shm
 *.sqlite3
 
 # Editors / OS

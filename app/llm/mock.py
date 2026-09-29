@@ -33,11 +33,16 @@ CATEGORY_KEYWORDS = {
 }
 
 KNOWN_BRANDS = [
-    "Amul", "Tata", "Nestle", "Britannia", "Parle", "Haldiram", "MDH", "Everest", "Fortune",
-    "Aashirvaad", "Maggi", "Colgate", "Dove", "Lux", "Dettol", "Himalaya", "Nivea", "Surf Excel",
-    "Vim", "Harpic", "Lizol", "Samsung", "Apple", "boAt", "Noise", "Mi", "Levis", "Puma", "Nike",
-    "Adidas", "Prestige", "Milton", "Pigeon", "Red Label", "Bru", "Coca Cola", "Pepsi", "Real",
+    "Amul", "Tata", "Tata Sampann", "Nestle", "Britannia", "Parle", "Haldiram", "MDH", "Everest",
+    "Fortune", "Aashirvaad", "India Gate", "Maggi", "Colgate", "Dove", "Lux", "Dettol", "Himalaya",
+    "Nivea", "Head & Shoulders", "Gillette", "Surf Excel", "Vim", "Harpic", "Lizol", "Odonil",
+    "Presto", "Samsung", "Apple", "boAt", "Noise", "Mi", "Logitech", "Duracell", "Levis", "Puma",
+    "Nike", "Adidas", "Allen Solly", "Biba", "Jockey", "Prestige", "Milton", "Pigeon", "Cello",
+    "Philips", "Bombay Dyeing", "Red Label", "Bru", "Nescafe", "Coca Cola", "Pepsi", "Real",
+    "Red Bull", "Bisleri",
 ]
+# Longest first, so "Tata Sampann" wins over "Tata".
+_BRANDS_LONGEST_FIRST = sorted(KNOWN_BRANDS, key=len, reverse=True)
 
 UNITS = {"g": "g", "gm": "g", "gms": "g", "kg": "kg", "ml": "ml", "l": "L", "ltr": "L"}
 STOPWORDS = {"of", "the", "and", "for", "with", "pack", "pck", "pk", "new", "combo", "set"}
@@ -88,9 +93,10 @@ def _pick_category(words: list[str]) -> str:
 
 
 def _find_brand(raw_title: str) -> str | None:
-    title = " ".join(raw_title.lower().split())
-    for brand in KNOWN_BRANDS:
-        if title.startswith(brand.lower() + " ") or title == brand.lower():
+    """A known brand appearing as whole words anywhere in the title."""
+    title = f" {' '.join(raw_title.lower().split())} "
+    for brand in _BRANDS_LONGEST_FIRST:
+        if f" {brand.lower()} " in title:
             return brand
     return None
 
