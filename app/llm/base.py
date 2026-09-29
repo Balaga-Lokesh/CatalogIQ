@@ -24,3 +24,6 @@ class LLMProvider(ABC):
 
         Raises LLMError if the call fails.
         """
+
+    async def close(self) -> None:
+        """Release resources (e.g. an HTTP connection pool). Default: nothing."""
