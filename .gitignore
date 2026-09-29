@@ -30,3 +30,6 @@ notes/
 
 # Local editor/agent config
 .claude/
+
+# Review copies
+README.pdf

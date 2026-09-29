@@ -116,13 +116,17 @@ API keys come only from environment variables or `.env`. `.env` is git-ignored, 
 pytest
 ```
 
-There are 145 tests, and all use the mock or a fake HTTP server, so no network is needed. The ones the brief asks for are:
-- `tests/test_pipeline.py`:
-  - **Concurrency limit:** checked with a fake provider that counts its own parallel calls, including across two jobs.
-  - **Retries:** 4 attempts, delays of 0.2/0.4/0.8 s, invalid output retried, and a slot released during backoff.
-  - **De-duplication:** sequential duplicates, simultaneous duplicates making one call, shared failures, failures not cached, and cancellation safety.
+There are 156 tests, and all use the mock or a fake HTTP server, so no network is needed. The ones the brief asks for are in `tests/test_pipeline.py`:
+- **Concurrency limit:** checked with a fake provider that counts its own parallel calls, including across two jobs.
+- **Retries:** 4 attempts, delays of 0.2/0.4/0.8 s, invalid output retried, and a slot released during backoff.
+- **De-duplication:** sequential duplicates, simultaneous duplicates making one call, shared failures, failures not cached, and cancellation safety.
+
+The rest:
 - `tests/test_jobs.py`: background jobs, fairness between jobs, and crash-and-resume.
 - `tests/test_api.py`: the whole API contract, `202` within 1 s, and responsiveness during a job.
+- `tests/test_ratelimit.py`: the per-minute pacer (even spacing, no bursts, cache hits never wait).
+- `tests/test_openai_provider.py`: the real provider against a fake HTTP server (errors, timeouts, 429s, keys).
+- The mock, validation, content key, database and `.env` loader each have their own test file.
 
 To regenerate the sample data:
 
@@ -241,15 +245,32 @@ Where the brief left something open, I chose the following:
 
 ## How I used AI tools
 
-I used Claude Code (Anthropic) as a pair programmer. We built the project one step at a time, in this order:
-1. mock provider
-2. validation
-3. pipeline
-4. database
-5. jobs
-6. API
-7. frontend
-8. real provider
-9. docs
+I built CatalogIQ with Claude Code (Anthropic's coding assistant) as a pair programmer. I had two days, and I wanted to finish with a project I understand, not just one that works. So I didn't ask for the whole app at once: we went one step at a time, in this order:
 
-Each step had its own commits and tests. Before each step we wrote down the questions it had to answer (for example, "should a task keep its semaphore slot while it sleeps between retries?"). I kept Cornell-style notes of every design decision and why it was made, and used them to review the concurrency, caching and recovery code until I could explain each line. The trade-offs in DESIGN.md are ones I can argue for.
+1. read the brief
+2. mock provider
+3. validation
+4. the pipeline (concurrency limit, retries, de-duplication)
+5. SQLite
+6. background jobs
+7. API
+8. frontend
+9. sample data
+10. the real LLM
+11. docs
+
+**How each step worked.**
+- **Questions first.** Before the step, I wrote down the questions it had to answer, for example "should a task keep its semaphore slot while it sleeps between retries?" or "what happens to duplicates waiting on a call that finally fails?".
+- **Then code, tests and a commit.** The AI wrote most of the code, each step with its own tests and small commits.
+- **Then notes.** I recorded what we did, what I learned, and the reason for each decision in Cornell-style notes, which I use to revise.
+
+**Decisions I made myself:**
+- **Groq as the real LLM.** I chose it after weighing it against a local Ollama model.
+- **A simple rate limiter instead of batching.** When Groq's free tier turned out to allow only about 15 calls a minute, batching would have been faster, but the rate limiter is simpler to explain and keeps the design intact.
+
+**What testing caught.** The AI got things wrong too, and the tests and real runs showed where:
+- A few tests were wrong and had to be fixed.
+- A Windows-only delay made `localhost` requests take 2 seconds. It only showed up when running the real server.
+- The default Groq model had been retired.
+
+In the interview I should be able to explain the concurrency, caching and crash-recovery code, and change it without AI help. That is why I used AI as a teacher and reviewer as much as a code generator.
