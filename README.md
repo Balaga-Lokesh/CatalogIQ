@@ -72,6 +72,7 @@ python -m app
 | `LLM_MODEL` | per provider | Override the default model |
 | `LLM_BASE_URL` | per provider | Override the API address |
 | `LLM_TIMEOUT_S` | `30` | Seconds before a call is abandoned |
+| `LLM_MAX_RPM` | none (`groq`: 14) | Max LLM calls **started** per minute; `0` = no limit |
 
 ## Run with the real LLM
 
@@ -88,7 +89,13 @@ $env:LLM_PROVIDER="groq"; $env:GROQ_API_KEY="your-key"; $env:LLM_CONCURRENCY=3
 python -m app
 ```
 
-Free tiers are rate-limited, so a lower `LLM_CONCURRENCY` avoids most 429 errors. Any 429s that do happen are retried with backoff.
+**Groq's free tier and the rate limiter.** I measured the limits on my key: about **8,000 tokens per minute** and **1,000 requests per day** per model. One call uses about 520 tokens, so only about 15 calls per minute fit. Sending faster just produces `429 Too Many Requests`.
+
+So the app has a small pacer ([app/ratelimit.py](app/ratelimit.py)) that spaces call *starts* evenly. For `groq` it defaults to 14 per minute, one call every ~4.3 s; change it with `LLM_MAX_RPM`. It works alongside the concurrency limit: the semaphore caps calls *in progress*, and the pacer caps calls *started per minute*. Cache hits skip both.
+
+Measured run: the first 30 sample rows took 120 s, with 30/30 done, 0 failed, 0 errors, no 429s, and 2 cache hits. The 240-row sample needs about 15 minutes on the free tier, so for a live demo with the real LLM, use a small file.
+
+The default model is `openai/gpt-oss-120b` with `reasoning_effort: low`. Of the free models I compared, it put the most listings in the right category, and low effort cuts it from about 650 to about 520 tokens per call with the same answers.
 
 **Ollama (local, no key):** install from https://ollama.com. Then:
 
@@ -177,6 +184,7 @@ app/
   main.py         API routes, error format, startup/shutdown (lifespan)
   config.py       settings from environment variables
   pipeline.py     Enricher: cache -> in-flight wait -> semaphore + retries
+  ratelimit.py    paces LLM call starts per minute (free-tier limits)
   jobs.py         background jobs, worker pools, resume after restart
   db.py           SQLite schema and queries
   normalize.py    content key for de-duplication
@@ -224,7 +232,7 @@ Where the brief left something open, I chose the following:
 
 ## Unfinished / what I'd do next
 
-- **Rate limiting:** the limit caps concurrency, not requests per minute. Provider rate limits are handled by retrying 429s. A shared token-bucket limiter and honouring `Retry-After` are described in DESIGN.md §3.
+- **Rate limiting is per process:** the pacer counts calls, not tokens, and lives in one process. At scale it should be a shared token bucket (e.g. in Redis) that also honours `Retry-After` (DESIGN.md §3). Batching several products per prompt would make Groq's free tier about 4–5 times faster.
 - **Pointless retries:** client errors other than 429 (e.g. 401, bad key) are retried like any failure; they could fail fast instead.
 - **Single process:** SQLite means one server process. Multiple workers would need Postgres and leases on job items (DESIGN.md §2).
 - **Search:** it's a `LIKE` scan, fine for this size. Full-text search and cursor pagination are described in DESIGN.md §4.
