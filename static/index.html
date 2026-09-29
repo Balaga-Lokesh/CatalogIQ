@@ -5,34 +5,111 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>CatalogIQ</title>
   <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/app.js" defer></script>
 </head>
 <body>
-  <header>
+  <a class="skip-link" href="#catalogue-heading">Skip to catalogue</a>
+
+  <header class="site-header">
     <h1>CatalogIQ</h1>
+    <p id="provider-info" class="muted"></p>
   </header>
 
-  <main>
-    <!-- TODO 1: upload CSV, parse in browser, send as a job -->
-    <section id="upload" aria-labelledby="upload-heading">
+  <main id="content">
+    <!-- 1. Upload a CSV, parsed in the browser, sent as a job -->
+    <section aria-labelledby="upload-heading" class="card">
       <h2 id="upload-heading">Upload listings</h2>
+      <form id="upload-form">
+        <div class="field">
+          <label for="csv-file">CSV file</label>
+          <p id="csv-hint" class="hint">Columns: <code>sku</code>, <code>raw_title</code>, and optionally <code>raw_description</code>.</p>
+          <input id="csv-file" name="csv" type="file" accept=".csv,text/csv" aria-describedby="csv-hint" required>
+        </div>
+        <button type="submit" class="primary">Upload and start job</button>
+        <p id="upload-message" class="message" role="status"></p>
+      </form>
     </section>
 
-    <!-- TODO 2: live job progress (poll at most once per second) -->
-    <section id="progress" aria-labelledby="progress-heading">
+    <!-- 2. Live job progress (polled at most once a second) -->
+    <section id="progress-section" aria-labelledby="progress-heading" class="card" hidden>
       <h2 id="progress-heading">Job progress</h2>
+      <p class="muted">Job <code id="job-id"></code> · <span id="job-status"></span></p>
+      <progress id="job-progress" max="1" value="0" aria-labelledby="progress-heading"></progress>
+      <dl class="counts">
+        <div><dt>Done</dt><dd id="count-done">0</dd></div>
+        <div><dt>Total</dt><dd id="count-total">0</dd></div>
+        <div><dt>Failed</dt><dd id="count-failed">0</dd></div>
+        <div><dt>Cache hits</dt><dd id="count-cache">0</dd></div>
+      </dl>
+      <p id="job-announce" class="visually-hidden" aria-live="polite"></p>
     </section>
 
-    <!-- TODO 3: catalogue - pagination, category filter, debounced search -->
-    <section id="catalogue" aria-labelledby="catalogue-heading">
-      <h2 id="catalogue-heading">Catalogue</h2>
-    </section>
-
-    <!-- TODO 4: review - raw vs cleaned side by side, edit, approve -->
-    <section id="review" aria-labelledby="review-heading">
-      <h2 id="review-heading">Review product</h2>
+    <!-- 3. Browse the catalogue -->
+    <section aria-labelledby="catalogue-heading" class="card">
+      <h2 id="catalogue-heading" tabindex="-1">Catalogue</h2>
+      <form id="filters" role="search" class="filters">
+        <div class="field">
+          <label for="search">Search titles</label>
+          <input id="search" name="q" type="search" autocomplete="off" enterkeyhint="search">
+        </div>
+        <div class="field">
+          <label for="category-filter">Category</label>
+          <select id="category-filter" name="category">
+            <option value="">All categories</option>
+          </select>
+        </div>
+      </form>
+      <p id="results-summary" class="muted" aria-live="polite"></p>
+      <ul id="product-list" class="product-list" role="list"></ul>
+      <nav class="pager" aria-label="Catalogue pages">
+        <button type="button" id="prev-page">Previous</button>
+        <span id="page-info"></span>
+        <button type="button" id="next-page">Next</button>
+      </nav>
     </section>
   </main>
 
-  <script src="/static/app.js"></script>
+  <!-- 4. Review a product: raw vs cleaned side by side, edit, approve -->
+  <dialog id="review-dialog" aria-labelledby="review-heading">
+    <form id="review-form" method="dialog">
+      <h2 id="review-heading">Review <code id="review-sku"></code></h2>
+      <p>Status: <span id="review-status" class="badge"></span></p>
+      <p id="review-error" class="error-box" hidden></p>
+
+      <div class="side-by-side">
+        <section aria-labelledby="raw-heading" class="panel">
+          <h3 id="raw-heading">Raw listing</h3>
+          <dl>
+            <dt>Title</dt><dd id="raw-title"></dd>
+            <dt>Description</dt><dd id="raw-description"></dd>
+          </dl>
+        </section>
+
+        <section aria-labelledby="clean-heading" class="panel">
+          <h3 id="clean-heading">Cleaned</h3>
+          <div class="field">
+            <label for="edit-title">Clean title</label>
+            <input id="edit-title" name="clean_title" required>
+          </div>
+          <div class="field">
+            <label for="edit-category">Category</label>
+            <select id="edit-category" name="category" required></select>
+          </div>
+          <div class="field">
+            <label for="edit-tags">Tags</label>
+            <p id="tags-hint" class="hint">Comma-separated, up to 5.</p>
+            <input id="edit-tags" name="tags" aria-describedby="tags-hint">
+          </div>
+          <p class="muted">Brand: <span id="review-brand"></span></p>
+        </section>
+      </div>
+
+      <p id="review-message" class="message" role="status"></p>
+      <div class="actions">
+        <button type="submit" value="cancel" formnovalidate>Close</button>
+        <button type="submit" value="approve" id="approve-button" class="primary">Save and approve</button>
+      </div>
+    </form>
+  </dialog>
 </body>
 </html>
