@@ -11,7 +11,7 @@ The work is in the pipeline around the LLM:
 
 - **Backend:** Python 3.10+, FastAPI, asyncio, SQLite
 - **Frontend:** one page of plain HTML, CSS and JavaScript at `/`
-- **LLM:** a built-in mock (the default), or a real provider through any OpenAI-compatible API. I use **Groq** (`llama-3.1-8b-instant`, free tier); Ollama, OpenRouter and Gemini also work.
+- **LLM:** a built-in mock (the default), or a real provider through any OpenAI-compatible API. I use **Groq** (`openai/gpt-oss-120b`, free tier); Ollama, OpenRouter and Gemini also work.
 - **Design write-up:** [DESIGN.md](DESIGN.md)
 
 ## Setup (clean machine)

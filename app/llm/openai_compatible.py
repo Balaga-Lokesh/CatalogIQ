@@ -24,12 +24,16 @@ class Preset:
     model: str
     key_env: str | None      # environment variable holding the API key (None = no key)
     json_mode: bool          # send response_format={"type": "json_object"}
+    extra: tuple = ()        # extra request fields, as (name, value) pairs
 
 
-# Default models are small, free-tier options. Free models change over time:
-# override with LLM_MODEL if a default is retired.
+# Free models change over time: override with LLM_MODEL if a default is retired.
+# Groq default checked 2026-09-30: gpt-oss-120b gave the best categories of the
+# models on the free tier; reasoning_effort=low cuts its hidden reasoning tokens
+# (~650 -> ~520 tokens per call), which matters under a tokens-per-minute limit.
 PRESETS = {
-    "groq": Preset("https://api.groq.com/openai/v1", "llama-3.1-8b-instant", "GROQ_API_KEY", True),
+    "groq": Preset("https://api.groq.com/openai/v1", "openai/gpt-oss-120b", "GROQ_API_KEY", True,
+                   extra=(("reasoning_effort", "low"),)),
     "ollama": Preset("http://localhost:11434/v1", "llama3.2:3b", None, True),
     "openrouter": Preset("https://openrouter.ai/api/v1", "meta-llama/llama-3.2-3b-instruct:free",
                          "OPENROUTER_API_KEY", False),
@@ -49,11 +53,13 @@ class OpenAICompatibleProvider(LLMProvider):
         api_key: str | None = None,
         json_mode: bool = True,
         timeout_s: float = 30.0,
+        extra: dict | None = None,
         transport: httpx.AsyncBaseTransport | None = None,   # tests pass a fake server
     ) -> None:
         self.name = name
         self.model = model
         self.json_mode = json_mode
+        self.extra = dict(extra or {})
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
         # ONE client for the whole app: it reuses connections (keep-alive)
         # instead of opening a new TLS connection per product.
@@ -72,6 +78,7 @@ class OpenAICompatibleProvider(LLMProvider):
         }
         if self.json_mode:
             payload["response_format"] = {"type": "json_object"}
+        payload.update(self.extra)
 
         try:
             response = await self._client.post("/chat/completions", json=payload)
@@ -119,5 +126,6 @@ def from_preset(name: str, *, api_key=None, model=None, base_url=None, timeout_s
         api_key=key,
         json_mode=preset.json_mode,
         timeout_s=timeout_s,
+        extra=dict(preset.extra) if not model else {},   # extras are tuned for the default model
         transport=transport,
     )

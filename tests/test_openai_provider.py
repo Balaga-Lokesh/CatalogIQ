@@ -118,8 +118,23 @@ def test_presets_need_their_key(monkeypatch):
         from_preset("groq")
     monkeypatch.setenv("GROQ_API_KEY", "from-env")
     provider = from_preset("groq")
-    assert provider.model == "llama-3.1-8b-instant"
+    assert provider.model == "openai/gpt-oss-120b"
+    assert provider.extra == {"reasoning_effort": "low"}
     asyncio.run(provider.close())
+
+
+def test_extra_fields_are_sent():
+    seen = {}
+
+    def handler(request):
+        seen["body"] = json.loads(request.content)
+        return reply(json.dumps(ANSWER))
+
+    provider = OpenAICompatibleProvider("groq", "https://llm.test/v1", "m", api_key="k",
+                                        extra={"reasoning_effort": "low"},
+                                        transport=httpx.MockTransport(handler))
+    call(provider)
+    assert seen["body"]["reasoning_effort"] == "low"
 
 
 def test_ollama_needs_no_key():
