@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+
+# Secrets - never commit API keys
+.env
+
+# Local database
+*.db
+*.sqlite3
+
+# Editors / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Assignment brief (company material, not part of the code)
+CatalogIQ_Internship_Assignment.pdf
+
+# Personal Cornell learning notes (not part of the submission)
+notes/

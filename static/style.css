@@ -1,0 +1,15 @@
+/* Must work on a 360px phone screen. Visual design is not graded. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 16px;
+  font-family: system-ui, sans-serif;
+  line-height: 1.4;
+}
+
+main {
+  max-width: 960px;
+  margin: 0 auto;
+}

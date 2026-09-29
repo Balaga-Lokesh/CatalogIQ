@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CatalogIQ</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>CatalogIQ</h1>
+  </header>
+
+  <main>
+    <!-- TODO 1: upload CSV, parse in browser, send as a job -->
+    <section id="upload" aria-labelledby="upload-heading">
+      <h2 id="upload-heading">Upload listings</h2>
+    </section>
+
+    <!-- TODO 2: live job progress (poll at most once per second) -->
+    <section id="progress" aria-labelledby="progress-heading">
+      <h2 id="progress-heading">Job progress</h2>
+    </section>
+
+    <!-- TODO 3: catalogue - pagination, category filter, debounced search -->
+    <section id="catalogue" aria-labelledby="catalogue-heading">
+      <h2 id="catalogue-heading">Catalogue</h2>
+    </section>
+
+    <!-- TODO 4: review - raw vs cleaned side by side, edit, approve -->
+    <section id="review" aria-labelledby="review-heading">
+      <h2 id="review-heading">Review product</h2>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
