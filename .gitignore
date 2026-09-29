@@ -25,3 +25,6 @@ CatalogIQ_Internship_Assignment.pdf
 
 # Personal Cornell learning notes (not part of the submission)
 notes/
+
+# Local editor/agent config
+.claude/
