@@ -1,6 +1,6 @@
 """FastAPI app: the API contract from the brief + serves the frontend at /.
 
-Run with:  uvicorn app.main:app --port 8000
+Run with:  python -m app        (see app/__main__.py)
 
 Every route is `async def`, so it runs on the event-loop thread. That keeps
 all database access on one thread (see app/db.py) and means a route never
